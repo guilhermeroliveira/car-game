@@ -1,17 +1,19 @@
-const canvas = document.querySelector("canvas");
-const ctx = canvas.getContext("2d");
+const mainCanvas = document.querySelector("#main");
+const mainCtx = mainCanvas.getContext("2d");
+const debugCanvas = document.querySelector("#debug");
+const debugCtx = debugCanvas.getContext("2d");
 
 const carImage = new Image();
 carImage.src = "./assets/car.png";
-carImage.width = 300;
-carImage.height = 150;
+carImage.width = 150;
+carImage.height = 75;
 
 const tireImage = new Image();
 tireImage.src = "./assets/tire.png";
-tireImage.width = 50;
-tireImage.height = 16;
+tireImage.width = 25;
+tireImage.height = 8;
 
-const maxTireAngle = (30 * Math.PI) / 180;
+const maxTireAngle = 30 * (Math.PI / 180);
 
 const car = {
   position: {
@@ -30,32 +32,49 @@ const car = {
   draw: () => {
     if (!car.model.complete) return;
 
-    ctx.translate(car.position.x, car.position.y);
-    ctx.rotate(car.angle);
+    mainCtx.translate(car.position.x, car.position.y);
+    mainCtx.rotate(car.angle);
+
+    debugCtx.translate(car.position.x, car.position.y);
+    debugCtx.rotate(car.angle);
 
     for (let i = 0; i < 2; i++) {
       if (!tireImage.complete) break;
-      ctx.save();
+
+      mainCtx.save();
+      debugCtx.save();
+
       const modifier = Math.pow(-1, i + 1);
-      ctx.translate(
-        car.size.width / 2 - tireImage.width / 2 - 40,
+
+      mainCtx.translate(
+        car.size.width / 2 - tireImage.width / 2 - 20,
         (car.size.height / 2) * modifier -
           (tireImage.height / 2) * modifier -
-          15 * modifier
+          (car.size.height / 10) * modifier
       );
-      ctx.rotate(car.tireAngle);
+      debugCtx.translate(
+        car.size.width / 2 - tireImage.width / 2 - 20,
+        (car.size.height / 2) * modifier -
+          (tireImage.height / 2) * modifier -
+          (car.size.height / 10) * modifier
+      );
 
-      ctx.drawImage(
+      mainCtx.rotate(car.tireAngle);
+
+      mainCtx.drawImage(
         tireImage,
         -tireImage.width / 2,
         -tireImage.height / 2,
         tireImage.width,
         tireImage.height
       );
-      ctx.restore();
+
+      debugCtx.fillRect(-tireImage.width / 2, -tireImage.height / 2, 2.5, 2.5);
+      debugCtx.restore();
+      mainCtx.restore();
     }
 
-    ctx.drawImage(
+    mainCtx.drawImage(
       car.model,
       -car.size.width / 2,
       -car.size.height / 2,
@@ -63,8 +82,19 @@ const car = {
       car.size.height
     );
 
-    car.position.x += Math.cos(car.tireAngle) * car.acceleration;
-    car.position.y += Math.sin(car.tireAngle) * car.acceleration;
+    if (car.acceleration > 0) {
+      car.angle +=
+        car.tireAngle * (Math.PI / 180) -
+        car.tireAngle * (Math.PI / 180) * car.acceleration;
+
+      const deltaX = Math.cos(car.angle) * car.acceleration;
+      const deltaY = Math.sin(car.angle) * car.acceleration;
+      car.position.x += deltaX;
+      car.position.y += deltaY;
+
+      if (deltaX !== 0 && deltaY !== 0) {
+      }
+    }
   },
 };
 
@@ -75,38 +105,28 @@ carImage.onload = () => {
 
 const drawables = [car];
 
-function drawFrame() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+async function drawFrame() {
+  mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
 
   for (const drawable of drawables) {
-    ctx.save();
+    mainCtx.save();
+    debugCtx.save();
     drawable.draw();
-    ctx.restore();
+    mainCtx.restore();
+    debugCtx.restore();
   }
+
   requestAnimationFrame(drawFrame);
 }
 
 document.onkeydown = (ev) => {
-  console.log(ev.key);
-  ev.preventDefault();
+  if (!["F5", "Control", "r"].includes(ev.key)) ev.preventDefault();
   if (ev.key === "ArrowLeft") {
     car.tireAngle = Math.max(-maxTireAngle, car.tireAngle - Math.PI / 90);
-
-    console.log(car.tireAngle);
-    console.log({
-      cos: Math.cos(car.tireAngle),
-      sin: Math.sin(car.tireAngle),
-    });
   }
 
   if (ev.key === "ArrowRight") {
     car.tireAngle = Math.min(maxTireAngle, car.tireAngle + Math.PI / 90);
-
-    console.log(car.tireAngle);
-    console.log({
-      cos: Math.cos(car.tireAngle),
-      sin: Math.sin(car.tireAngle),
-    });
   }
 
   if (ev.key === "ArrowUp") {
@@ -119,3 +139,22 @@ document.onkeydown = (ev) => {
 };
 
 drawFrame();
+
+function clamp(num, min, max) {
+  return num <= min ? min : num >= max ? max : num;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+let logLock = false;
+
+async function logs() {
+  if (logLock) return;
+
+  logLock = true;
+  await sleep(1000);
+  logLock = false;
+  console.log({ carAngle: car.angle });
+}
