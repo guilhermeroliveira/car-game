@@ -27,7 +27,7 @@ const car = {
   angle: 0,
   model: carImage,
   tireAngle: 0,
-  acceleration: 0,
+  speed: 0,
 
   draw: () => {
     if (!car.model.complete) return;
@@ -82,13 +82,13 @@ const car = {
       car.size.height
     );
 
-    if (car.acceleration > 0) {
+    if (car.speed !== 0) {
       car.angle +=
         car.tireAngle * (Math.PI / 180) -
-        car.tireAngle * (Math.PI / 180) * car.acceleration;
+        car.tireAngle * (Math.PI / 180) * car.speed;
 
-      const deltaX = Math.cos(car.angle) * car.acceleration;
-      const deltaY = Math.sin(car.angle) * car.acceleration;
+      const deltaX = Math.cos(car.angle) * car.speed;
+      const deltaY = Math.sin(car.angle) * car.speed;
       car.position.x += deltaX;
       car.position.y += deltaY;
 
@@ -130,13 +130,15 @@ document.onkeydown = (ev) => {
   }
 
   if (ev.key === "ArrowUp") {
-    car.acceleration = Math.min(0.3, car.acceleration + 0.1);
+    car.speed = Math.min(0.3, car.speed + 0.1);
   }
 
   if (ev.key === "ArrowDown") {
-    car.acceleration = Math.max(-0.3, car.acceleration - 0.1);
+    car.speed = Math.max(-0.3, car.speed - 0.1);
   }
 };
+
+document.onkeyup = (ev) => {};
 
 drawFrame();
 
